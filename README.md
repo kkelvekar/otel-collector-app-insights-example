@@ -1,0 +1,1 @@
+# otel-collector-app-insights-example
