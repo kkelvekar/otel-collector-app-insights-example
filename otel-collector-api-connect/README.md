@@ -1,48 +1,51 @@
-<code> # Sending Logs, Traces, and Metrics to OpenTelemetry Collector
-Introduction
+# Sending Logs, Traces, and Metrics to OpenTelemetry Collector
+
+## Introduction
 This README provides a step-by-step guide on how to configure an ASP.NET Core application to send logs, traces, and metrics to an OpenTelemetry Collector. The main goal is to help you instrument your application using OpenTelemetry and understand how to export telemetry data to a collector within an AKS (Azure Kubernetes Service) cluster.
 
-Note: The OpenTelemetry Collector is accessible only within the AKS cluster. It is not accessible from the Developer Cloud Desktop. You can obtain the collector's address from the service's IP address within the cluster.
+**Note:** The OpenTelemetry Collector is accessible only within the AKS cluster. It is not accessible from the Developer Cloud Desktop. You can obtain the collector's address from the service's IP address within the cluster.
 
-Table of Contents
-Prerequisites
-Setting Up OpenTelemetry in ASP.NET Core
-Configure Logging
-Add Metrics and Tracing
-Configure the OpenTelemetry Collector Endpoint
-Implementing Tracing and Metrics in the Controller
-Accessing the OpenTelemetry Collector
-Example Repository
-Code Explanation
-Conclusion
-Prerequisites
-ASP.NET Core Application: An existing ASP.NET Core project.
-OpenTelemetry NuGet Packages:
-OpenTelemetry
-OpenTelemetry.Extensions.Hosting
-OpenTelemetry.Exporter.OpenTelemetryProtocol
-OpenTelemetry.Instrumentation.AspNetCore
-OpenTelemetry.Instrumentation.Http
-OpenTelemetry.Instrumentation.Runtime
-OpenTelemetry.Instrumentation.Process
-AKS Cluster: Access to an AKS cluster where the OpenTelemetry Collector is deployed.
-Knowledge of C# and .NET Core.
-Setting Up OpenTelemetry in ASP.NET Core
-Configure Logging
-In your Program.cs, set up logging to be exported via OpenTelemetry:
+## Table of Contents
+- [Prerequisites](#prerequisites)
+- [Setting Up OpenTelemetry in ASP.NET Core](#setting-up-opentelemetry-in-aspnet-core)
+  - [Configure Logging](#configure-logging)
+  - [Add Metrics and Tracing](#add-metrics-and-tracing)
+  - [Configure the OpenTelemetry Collector Endpoint](#configure-the-opentelemetry-collector-endpoint)
+- [Implementing Tracing and Metrics in the Controller](#implementing-tracing-and-metrics-in-the-controller)
+- [Accessing the OpenTelemetry Collector](#accessing-the-opentelemetry-collector)
+- [Example Repository](#example-repository)
+- [Code Explanation](#code-explanation)
+- [Conclusion](#conclusion)
 
-csharp
-Copy code
+## Prerequisites
+- **ASP.NET Core Application:** An existing ASP.NET Core project.
+- **OpenTelemetry NuGet Packages:**
+  - OpenTelemetry
+  - OpenTelemetry.Extensions.Hosting
+  - OpenTelemetry.Exporter.OpenTelemetryProtocol
+  - OpenTelemetry.Instrumentation.AspNetCore
+  - OpenTelemetry.Instrumentation.Http
+  - OpenTelemetry.Instrumentation.Runtime
+  - OpenTelemetry.Instrumentation.Process
+- **AKS Cluster:** Access to an AKS cluster where the OpenTelemetry Collector is deployed.
+- **Knowledge of C# and .NET Core.**
+
+## Setting Up OpenTelemetry in ASP.NET Core
+
+### Configure Logging
+In your `Program.cs`, set up logging to be exported via OpenTelemetry:
+
+```csharp
 builder.Logging.AddOpenTelemetry(logging =>
 {
     logging.IncludeFormattedMessage = true;
     logging.IncludeScopes = true;
 });
-Add Metrics and Tracing
-Add OpenTelemetry services to collect metrics and traces:
+```
+### Add Metrics and Tracing
+### Add OpenTelemetry services to collect metrics and traces:
 
-csharp
-Copy code
+```csharp
 var otel = builder.Services.AddOpenTelemetry();
 
 // Configure Metrics
@@ -67,11 +70,10 @@ otel.WithTracing(tracing =>
     // Register custom ActivitySources
     tracing.AddSource(nameof(YourNamespace.Controllers.YourController));
 });
-Configure the OpenTelemetry Collector Endpoint
+```
+### Configure the OpenTelemetry Collector Endpoint
 Set the endpoint for the OpenTelemetry Collector. This can be configured via environment variables or app settings:
-
-csharp
-Copy code
+```csharp
 var OtlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
 if (OtlpEndpoint != null)
 {
@@ -81,22 +83,22 @@ if (OtlpEndpoint != null)
         // Additional exporter options can be set here
     });
 }
+```
 In your appsettings.json:
-
-json
-Copy code
+```json
 {
   "OTEL_EXPORTER_OTLP_ENDPOINT": "http://<collector-service-ip>:4317",
   "OTEL_SERVICE_NAME": "YourServiceName",
   "AllowedHosts": "*"
 }
+```
 Replace <collector-service-ip> with the IP address of your OpenTelemetry Collector service in the AKS cluster.
 
-Implementing Tracing and Metrics in the Controller
+## Implementing Tracing and Metrics in the Controller
+
 In your controller, set up an ActivitySource and Meter, and instrument your actions:
 
-csharp
-Copy code
+```csharp
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
@@ -142,57 +144,59 @@ namespace YourNamespace.Controllers
         }
     }
 }
-Accessing the OpenTelemetry Collector
+```
+
+## Accessing the OpenTelemetry Collector
+
 Since the OpenTelemetry Collector is accessible only within the AKS cluster, you need to obtain its service IP address:
 
 Use kubectl to get the service details:
 
-bash
-Copy code
+```bash
 kubectl get services
+```
 Locate the OpenTelemetry Collector service and note its ClusterIP.
 
-Use this IP address in your OTEL_EXPORTER_OTLP_ENDPOINT setting:
+Use this IP address in your `OTEL_EXPORTER_OTLP_ENDPOINT` setting:
 
-json
-Copy code
+```json
 "OTEL_EXPORTER_OTLP_ENDPOINT": "http://<collector-service-ip>:4317"
-Note: Ensure your application is deployed within the same AKS cluster or has network access to the cluster.
+```
+**Note:** Ensure your application is deployed within the same AKS cluster or has network access to the cluster.
 
-Example Repository
+## Example Repository
+
 You can find a working example of this setup in the following repository:
 
-Example Repository Link
+[Example Repository Link](#)
 
 Please replace the above link with the actual repository link.
 
-Code Explanation
-Program.cs
-Logging Configuration: Sets up logging to export logs via OpenTelemetry, including formatted messages and scopes.
+## Code Explanation
 
-OpenTelemetry Services: Adds OpenTelemetry services for metrics and tracing, registering custom meters and activity sources.
+**Program.cs**
 
-OTLP Exporter Configuration: Configures the application to export telemetry data to the OpenTelemetry Collector using the OTLP exporter.
+- **Logging Configuration:** Sets up logging to export logs via OpenTelemetry, including formatted messages and scopes.
+- **OpenTelemetry Services:** Adds OpenTelemetry services for metrics and tracing, registering custom meters and activity sources.
+- **OTLP Exporter Configuration:** Configures the application to export telemetry data to the OpenTelemetry Collector using the OTLP exporter.
+- **Dependency Injection:** Adds controllers and Swagger for API documentation.
 
-Dependency Injection: Adds controllers and Swagger for API documentation.
+**Controller**
 
-Controller
-ActivitySource and Meter: Creates static instances of ActivitySource and Meter to instrument tracing and metrics within the controller.
+- **ActivitySource and Meter:** Creates static instances of ActivitySource and Meter to instrument tracing and metrics within the controller.
+- **Custom Counter Metric:** Defines a Counter<long> metric to count the number of times the action method is called.
+- **Tracing in Action Method:** Starts a new activity using the ActivitySource to trace the execution of the action method.
+- **Logging:** Uses ILogger to log information and errors, which are also exported via OpenTelemetry.
 
-Custom Counter Metric: Defines a Counter<long> metric to count the number of times the action method is called.
+**appsettings.json**
 
-Tracing in Action Method: Starts a new activity using the ActivitySource to trace the execution of the action method.
+- **OTLP Endpoint Configuration:** Sets the `OTEL_EXPORTER_OTLP_ENDPOINT` to the OpenTelemetry Collector's service IP address within the AKS cluster.
+- **Service Name:** Defines the `OTEL_SERVICE_NAME` for identifying the service in telemetry data.
 
-Logging: Uses ILogger to log information and errors, which are also exported via OpenTelemetry.
+## Conclusion
 
-appsettings.json
-OTLP Endpoint Configuration: Sets the OTEL_EXPORTER_OTLP_ENDPOINT to the OpenTelemetry Collector's service IP address within the AKS cluster.
-
-Service Name: Defines the OTEL_SERVICE_NAME for identifying the service in telemetry data.
-
-Conclusion
 By following this guide, you should be able to instrument your ASP.NET Core application with OpenTelemetry and export logs, traces, and metrics to an OpenTelemetry Collector within an AKS cluster. This setup allows you to monitor and observe your application's behavior in a distributed environment effectively.
 
 For any questions or further assistance, please refer to the OpenTelemetry .NET documentation or reach out to your DevOps team.
 
-Document prepared on [Date]. </code>
+
