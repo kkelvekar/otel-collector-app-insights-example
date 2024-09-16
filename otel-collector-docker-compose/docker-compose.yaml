@@ -1,0 +1,11 @@
+services:
+  otel-collector:
+    container_name: otel
+    hostname: otel
+    image: otel/opentelemetry-collector-contrib:0.75.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    restart: unless-stopped
+    ports:
+      - 4317:4317   # OTLP gRPC receiver

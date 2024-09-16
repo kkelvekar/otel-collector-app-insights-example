@@ -1,0 +1,6 @@
+@otel_collector_api_connect_HostAddress = http://localhost:5285
+
+GET {{otel_collector_api_connect_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

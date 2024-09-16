@@ -1,0 +1,37 @@
+# Modify your otel-deployment.yaml file
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: otel  # Remove this line if not using a custom namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.75.0
+        command: ["--config=/etc/otel-collector-config.yaml"]
+        volumeMounts:
+        - name: otel-collector-config-volume
+          mountPath: /etc/otel-collector-config.yaml
+          subPath: otel-collector-config.yaml
+        ports:
+        - containerPort: 4317
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: otel-collector-config-volume
+        configMap:
+          name: otel-collector-config

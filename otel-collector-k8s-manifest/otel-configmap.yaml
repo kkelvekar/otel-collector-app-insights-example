@@ -1,0 +1,40 @@
+# Create a file called otel-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: otel  # Remove this line if not using a custom namespace
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+
+    processors:
+      batch:
+
+    exporters:
+      azuremonitor:
+        instrumentation_key: "2905e636-dc74-4611-b8a7-3040a9fb2a78"
+      logging:
+        loglevel: info
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [azuremonitor, logging]
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [azuremonitor, logging]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [azuremonitor, logging]
