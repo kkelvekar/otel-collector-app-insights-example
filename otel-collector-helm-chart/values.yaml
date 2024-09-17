@@ -1,0 +1,18 @@
+replicaCount: 1
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: "0.75.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 4317
+
+resources:
+  limits:
+    cpu: "200m"
+    memory: "512Mi"
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
