@@ -12,8 +12,8 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - name: http
-      port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.port }}
+      port: {{ .Values.service.hostport }}
+      targetPort: {{ .Values.service.containerport }}
       protocol: {{ .Values.service.protocol }}
   selector:
     app.kubernetes.io/name: {{ .Chart.Name }}

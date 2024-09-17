@@ -5,17 +5,18 @@ namespace: otel-examples
 image:
   repository: kkelvekar/otelcollectorapiconnect
   pullPolicy: IfNotPresent
-  tag: "1.0.2"
+  tag: "1.0.0"
 
 service:
   type: LoadBalancer
-  port: 8080
+  hostport: 5000
+  containerport: 8080
   protocol: TCP
 
 resources:
   limits:
-    cpu: 500m
+    cpu: 400m
     memory: 1Gi
   requests:
-    cpu: 250m
+    cpu: 200m
     memory: 512Mi
