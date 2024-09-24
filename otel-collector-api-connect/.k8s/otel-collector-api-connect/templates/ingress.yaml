@@ -3,10 +3,13 @@ kind: Ingress
 metadata:
   name: {{ include "mychart.fullname" . }}-ingress
   namespace: {{ .Release.Namespace }}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   ingressClassName: nginx
   rules:
-    - http:
+    - host: api.kkelvekar.com
+      http:
         paths:
           - path: /
             pathType: Prefix
@@ -15,3 +18,7 @@ spec:
                 name: {{ include "mychart.fullname" . }}-service
                 port:
                   number: {{ .Values.service.hostport }}
+  tls:
+  - hosts:
+    - api.kkelvekar.com
+    secretName: api-kkelvekar-secret
