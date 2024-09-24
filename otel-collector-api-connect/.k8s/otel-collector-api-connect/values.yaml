@@ -8,8 +8,8 @@ image:
   tag: "1.0.0"
 
 service:
-  type: LoadBalancer
-  hostport: 5000
+  type: ClusterIP
+  hostport: 8080
   containerport: 8080
   protocol: TCP
 
