@@ -5,9 +5,11 @@ using System.Diagnostics.Metrics;
 using System.Diagnostics;
 using Serilog;
 using Microsoft.Extensions.Configuration;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 var Configuration = builder.Configuration;
+var Environment = builder.Environment;
 
 // Custom metrics for the application
 var greeterMeter = new Meter("OTel.Example", "1.0.0");
@@ -75,17 +77,19 @@ otel.UseOtlpExporter(OpenTelemetry.Exporter.OtlpExportProtocol.Grpc, new Uri(ote
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    var serverUrl = Configuration["SwaggerOptions:ServerUrl"];
+    var serverDescription = Configuration["SwaggerOptions:Description"];
+    c.AddServer(new OpenApiServer() { Url = serverUrl, Description = serverDescription });
+});
 
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-//}
+app.UseSwagger();
+
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
