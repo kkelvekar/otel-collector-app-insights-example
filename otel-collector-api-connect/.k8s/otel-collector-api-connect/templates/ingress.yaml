@@ -4,21 +4,24 @@ metadata:
   name: {{ include "mychart.fullname" . }}-ingress
   namespace: {{ .Release.Namespace }}
   annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   ingressClassName: nginx
   rules:
     - host: api.kkelvekar.com
       http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: /{{ .Release.Namespace }}/{{ .Release.Name }}/weatherapi(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ include "mychart.fullname" . }}-service
                 port:
                   number: {{ .Values.service.hostport }}
   tls:
-  - hosts:
-    - api.kkelvekar.com
-    secretName: api-kkelvekar-secret
+    - hosts:
+        - api.kkelvekar.com
+      secretName: api-kkelvekar-secret
