@@ -14,7 +14,7 @@ spec:
     - host: api.kkelvekar.com
       http:
         paths:
-          - path: /{{ .Release.Namespace }}/{{ .Release.Name }}/weatherapi(/|$)(.*)
+          - path: /{{ .Release.Namespace }}/{{ .Release.Name }}/todoapi(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
