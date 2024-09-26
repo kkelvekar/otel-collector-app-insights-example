@@ -1,202 +1,178 @@
-# Sending Logs, Traces, and Metrics to OpenTelemetry Collector
+# TodoItems API with OpenTelemetry Integration - .NET 8
 
-## Introduction
-This README provides a step-by-step guide on how to configure an ASP.NET Core application to send logs, traces, and metrics to an OpenTelemetry Collector. The main goal is to help you instrument your application using OpenTelemetry and understand how to export telemetry data to a collector within an AKS (Azure Kubernetes Service) cluster.
+This is a sample ASP.NET Core Web API built on .NET 8, demonstrating how to send logs, metrics, and custom traces to an OpenTelemetry (OTel) collector using the OpenTelemetry protocol. The application is designed to showcase the key observability practices necessary for real-world application monitoring and debugging.
 
-**Note:** The OpenTelemetry Collector is accessible only within the AKS cluster. It is not accessible from the Developer Cloud Desktop. You can obtain the collector's address from the service's IP address within the cluster.
+## Purpose
 
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Setting Up OpenTelemetry in ASP.NET Core](#setting-up-opentelemetry-in-aspnet-core)
-  - [Configure Logging](#configure-logging)
-  - [Add Metrics and Tracing](#add-metrics-and-tracing)
-  - [Configure the OpenTelemetry Collector Endpoint](#configure-the-opentelemetry-collector-endpoint)
-- [Implementing Tracing and Metrics in the Controller](#implementing-tracing-and-metrics-in-the-controller)
-- [Accessing the OpenTelemetry Collector](#accessing-the-opentelemetry-collector)
-- [Example Repository](#example-repository)
-- [Code Explanation](#code-explanation)
-- [Conclusion](#conclusion)
+This example demonstrates:
 
-## Prerequisites
-- **ASP.NET Core Application:** An existing ASP.NET Core project.
-- **OpenTelemetry NuGet Packages:**
-  - OpenTelemetry
-  - OpenTelemetry.Extensions.Hosting
-  - OpenTelemetry.Exporter.OpenTelemetryProtocol
-  - OpenTelemetry.Instrumentation.AspNetCore
-  - OpenTelemetry.Instrumentation.Http
-  - OpenTelemetry.Instrumentation.Runtime
-  - OpenTelemetry.Instrumentation.Process
-- **AKS Cluster:** Access to an AKS cluster where the OpenTelemetry Collector is deployed.
-- **Knowledge of C# and .NET Core.**
+- Application logs sent in OpenTelemetry format using Serilog, enabling structured logging for detailed insights.
+- Native metrics automatically collected by OpenTelemetry, providing performance metrics such as request count and response time.
+- Custom tracing for specific API requests and business processes.
+- Integration with OpenTelemetry, sending telemetry data (logs, metrics, and traces) to an OpenTelemetry collector.
 
-## Setting Up OpenTelemetry in ASP.NET Core
+## Key Features
 
-### Configure Logging
-In your `Program.cs`, set up logging to be exported via OpenTelemetry:
+### 1. Application Logs in OpenTelemetry Format
+
+The application uses Serilog to send structured logs in the OpenTelemetry format via the OTLP protocol. This setup enables the application to log important events, such as incoming requests, error occurrences, and custom business traces. The logs are shipped to the OpenTelemetry collector and can be visualized using monitoring tools like Grafana, Prometheus, or Azure Monitor.
+
+**What logs are captured:**
+
+- Info logs when API endpoints are called.
+- Error logs for simulated error conditions in the API.
+- Custom logs that accompany the custom traces, providing additional context for debugging and monitoring.
+
+### 2. Native Metrics with OpenTelemetry
+
+OpenTelemetry automatically captures native metrics from ASP.NET Core. This includes:
+
+- Request count: The total number of requests to each API endpoint.
+- Request duration: How long each request takes to complete.
+- Exception counts: The number of failed requests or errors.
+
+These metrics are automatically forwarded to the OpenTelemetry collector, where they can be used to monitor the overall health and performance of the API.
+
+### 3. Custom Tracing
+
+The application makes use of custom tracing for specific operations, helping monitor business processes and custom logic. Custom traces are captured using `ActivitySource` and include specific spans that help understand where time is spent and where potential issues might arise.
+
+**Custom tracing is particularly useful in scenarios like:**
+
+- Tracing long-running background processes.
+- Tracing nested function calls within API operations.
+
+## Controller Methods Explained
+
+The `TodoItemsController` provides three endpoints, each demonstrating a different aspect of observability (logging, tracing, and metrics) using OpenTelemetry.
+
+### 1. `GET /TodoItems`
+
+This endpoint returns a shuffled list of todo items and captures custom traces to track the flow of the request. Each request will create a trace span for the `GetTodos` operation.
+
+- **Custom Tracing**: The `ActivitySource` tracks when the todos are being fetched, how long the process takes, and when the response is sent back.
+- **Application Logs**: Info logs are generated to capture successful retrieval of todos and the number of items fetched.
 
 ```csharp
-builder.Logging.AddOpenTelemetry(logging =>
+[HttpGet(Name = "GetTodos")]
+public async Task<IEnumerable<TodoItem>> GetTodos()
 {
-    logging.IncludeFormattedMessage = true;
-    logging.IncludeScopes = true;
-});
-```
-### Add Metrics and Tracing
-### Add OpenTelemetry services to collect metrics and traces:
-
-```csharp
-var otel = builder.Services.AddOpenTelemetry();
-
-// Configure Metrics
-otel.WithMetrics(metrics =>
-{
-    metrics.AddAspNetCoreInstrumentation();
-
-    // Register custom Meters
-    metrics.AddMeter(nameof(YourNamespace.Controllers.YourController));
-
-    // Add built-in meters (if using .NET 8 or higher)
-    metrics.AddMeter("Microsoft.AspNetCore.Hosting");
-    metrics.AddMeter("Microsoft.AspNetCore.Server.Kestrel");
-});
-
-// Configure Tracing
-otel.WithTracing(tracing =>
-{
-    tracing.AddAspNetCoreInstrumentation();
-    tracing.AddHttpClientInstrumentation();
-
-    // Register custom ActivitySources
-    tracing.AddSource(nameof(YourNamespace.Controllers.YourController));
-});
-```
-### Configure the OpenTelemetry Collector Endpoint
-Set the endpoint for the OpenTelemetry Collector. This can be configured via environment variables or app settings:
-```csharp
-var OtlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
-if (OtlpEndpoint != null)
-{
-    otel.UseOtlpExporter(options =>
+    using (var activity = activitySource.StartActivity("GetTodos"))
     {
-        options.Endpoint = new Uri(OtlpEndpoint);
-        // Additional exporter options can be set here
-    });
-}
-```
-In your appsettings.json:
-```json
-{
-  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://<collector-service-ip>:4317",
-  "OTEL_SERVICE_NAME": "YourServiceName",
-  "AllowedHosts": "*"
-}
-```
-Replace <collector-service-ip> with the IP address of your OpenTelemetry Collector service in the AKS cluster.
+        _logger.LogInformation("Starting to fetch todos");
 
-## Implementing Tracing and Metrics in the Controller
+        var todos = await FetchTodos();
 
-In your controller, set up an ActivitySource and Meter, and instrument your actions:
-
-```csharp
-using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
-
-namespace YourNamespace.Controllers
-{
-    [ApiController]
-    [Route("[controller]")]
-    public class YourController : ControllerBase
-    {
-        // Define ActivitySource and Meter
-        private static readonly ActivitySource ActivitySource = new ActivitySource(nameof(YourController));
-        private static readonly Meter Meter = new Meter(nameof(YourController));
-
-        // Define a custom counter metric
-        private readonly Counter<long> _requestCounter;
-
-        private readonly ILogger<YourController> _logger;
-
-        public YourController(ILogger<YourController> logger)
-        {
-            _logger = logger;
-            _requestCounter = Meter.CreateCounter<long>("your_action_requests", description: "Number of requests for your action");
-        }
-
-        [HttpGet]
-        public IActionResult Get()
-        {
-            // Increment the custom counter metric
-            _requestCounter.Add(1);
-
-            // Start a new activity for tracing
-            using (var activity = ActivitySource.StartActivity("GetYourData"))
-            {
-                _logger.LogInformation("Processing Get request");
-
-                // Your action logic here
-
-                _logger.LogInformation("Get request processed successfully");
-
-                return Ok(/* your data */);
-            }
-        }
+        _logger.LogInformation($"Retrieved {todos.Count} todos successfully.");
+        return todos;
     }
 }
 ```
+### 2. `GET /TodoItems/process`
 
-## Accessing the OpenTelemetry Collector
+This endpoint simulates a data processing operation with a 2-second delay. It is designed to demonstrate how processing time can be captured effectively via native metrics.
 
-Since the OpenTelemetry Collector is accessible only within the AKS cluster, you need to obtain its service IP address:
+- **Metrics**: OpenTelemetry automatically captures the time taken to process the request and logs it as part of the request duration metric. This allows for monitoring of API performance and response times.
+- **Application Logs**: Info logs are generated to track the start and completion of the data processing.
 
-Use kubectl to get the service details:
-
-```bash
-kubectl get services
+```csharp
+[HttpGet("process", Name = "ProcessData")]
+public async Task<IActionResult> ProcessData()
+{
+    _logger.LogInformation("Processing some data...");
+    // Simulate some processing logic
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    return Ok("Data processed successfully");
+}
 ```
-Locate the OpenTelemetry Collector service and note its ClusterIP.
+### 3. `GET /TodoItems/error`
 
-Use this IP address in your `OTEL_EXPORTER_OTLP_ENDPOINT` setting:
+This endpoint simulates an error by throwing an exception, capturing error logs and tracing failures.
 
-```json
-"OTEL_EXPORTER_OTLP_ENDPOINT": "http://<collector-service-ip>:4317"
+- **Error Logs**: Serilog captures the exception and sends it in OpenTelemetry format to the OTel collector, making it visible in any observability tool connected to the collector.
+- **Custom Tracing**: OpenTelemetry traces the request, and the trace is marked as failed when the exception is thrown.
+- **Metrics**: OpenTelemetry captures the exception count for this endpoint, helping monitor the frequency of failures.
+
+```csharp
+[HttpGet("error", Name = "SimulateError")]
+public IActionResult SimulateError()
+{
+    _logger.LogInformation("Simulating an error condition in the TodoItems API");
+    try
+    {
+        throw new InvalidOperationException("This is a simulated exception for demonstration purposes.");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "An error occurred in SimulateError");
+        return StatusCode(StatusCodes.Status500InternalServerError, "Internal Server Error");
+    }
+}
 ```
-**Note:** Ensure your application is deployed within the same AKS cluster or has network access to the cluster.
+## How to Run the Application Locally
 
-## Example Repository
+### Prerequisites
 
-You can find a working example of this setup in the following repository:
+- .NET 8 SDK installed.
+- Access to an OpenTelemetry collector (configured to receive OTLP logs, traces, and metrics).
 
-[Example Repository Link](#)
+### Steps to Run
 
-Please replace the above link with the actual repository link.
+1. Clone the Repository:
 
-## Code Explanation
+    ```bash
+    git clone https://github.com/kkelvekar/otel-collector-app-insights-example.git
+    cd <project-directory>
+    ```
+2. Run the Application:
 
-**Program.cs**
+    ```bash
+    dotnet run
+    ```
 
-- **Logging Configuration:** Sets up logging to export logs via OpenTelemetry, including formatted messages and scopes.
-- **OpenTelemetry Services:** Adds OpenTelemetry services for metrics and tracing, registering custom meters and activity sources.
-- **OTLP Exporter Configuration:** Configures the application to export telemetry data to the OpenTelemetry Collector using the OTLP exporter.
-- **Dependency Injection:** Adds controllers and Swagger for API documentation.
+3. Access the API: Visit the Swagger UI to explore and test the API endpoints:
 
-**Controller**
+    ```bash
+    https://localhost:7207;http://localhost:5285
+    ```
 
-- **ActivitySource and Meter:** Creates static instances of ActivitySource and Meter to instrument tracing and metrics within the controller.
-- **Custom Counter Metric:** Defines a Counter<long> metric to count the number of times the action method is called.
-- **Tracing in Action Method:** Starts a new activity using the ActivitySource to trace the execution of the action method.
-- **Logging:** Uses ILogger to log information and errors, which are also exported via OpenTelemetry.
+## Deployment
+The application is deployed on a DEV AKS cluster.
+### Swagger UI
+- **URL**: `"https://api.kkelvekar.com/otel/opentelemetry-otel-api/todoapi/swagger/index.html"`
+- This interface provides a user-friendly way to interact with the API, allowing users to test various endpoints directly from their browser.
 
-**appsettings.json**
+### OpenTelemetry Collector Configuration
 
-- **OTLP Endpoint Configuration:** Sets the `OTEL_EXPORTER_OTLP_ENDPOINT` to the OpenTelemetry Collector's service IP address within the AKS cluster.
-- **Service Name:** Defines the `OTEL_SERVICE_NAME` for identifying the service in telemetry data.
+#### Production Environment
+
+- The OTel Collector is configured to be accessible only within the AKS cluster, using a Kubernetes ClusterIP service.
+- The collector endpoint in production is: `"http://otel-collector-clusterip-service.otel.svc.cluster.local:4317"`
+
+#### Local Development
+
+- To view telemetry data locally, you need to deploy an OTel Collector on your local environment.
+- Detailed instructions and the necessary configuration files can be found in the OTel Collector repository: [OTel Collector Repository](#)
+
+## Observability Insights
+
+### Application Logs in OpenTelemetry Format
+
+- Application logs are structured using Serilog and sent to the OpenTelemetry collector via the OTLP protocol.
+- These logs are critical for troubleshooting, providing details on API usage, errors, and business-specific events.
+
+### Native Metrics
+
+- Native ASP.NET Core metrics such as request counts, response durations, and exception counts are captured automatically by OpenTelemetry.
+- These metrics help you monitor the health and performance of the application without additional manual instrumentation.
+
+### Custom Tracing
+
+- Custom tracing is implemented using `ActivitySource` to capture detailed spans around specific API calls and business processes.
+- This allows you to monitor the execution flow of requests, identify bottlenecks, and debug performance issues effectively.
 
 ## Conclusion
 
-By following this guide, you should be able to instrument your ASP.NET Core application with OpenTelemetry and export logs, traces, and metrics to an OpenTelemetry Collector within an AKS cluster. This setup allows you to monitor and observe your application's behavior in a distributed environment effectively.
+This .NET 8 project demonstrates how to integrate OpenTelemetry into an ASP.NET Core API, achieving full observability through logs, metrics, and traces. It showcases the benefits of sending structured logs in OpenTelemetry format, capturing native metrics automatically, and creating custom spans for critical business logic.
 
-For any questions or further assistance, please refer to the OpenTelemetry .NET documentation or reach out to your DevOps team.
-
-
+This documentation can serve as a guide for developers looking to implement similar observability strategies in their own applications.
