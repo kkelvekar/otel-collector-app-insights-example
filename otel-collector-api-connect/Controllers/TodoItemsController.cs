@@ -23,7 +23,7 @@ namespace otel_collector_api_connect.Controllers
         [HttpGet(Name = "GetTodos")]
         public async Task<IEnumerable<TodoItem>> GetTodos()
         {
-            using (var activity = activitySource.StartActivity("GetTodos"))
+            using (var activity = activitySource.StartActivity("GetTodoTrace", ActivityKind.Internal))
             {
                 _logger.LogInformation("Starting to fetch todos");
 

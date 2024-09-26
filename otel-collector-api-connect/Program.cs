@@ -31,6 +31,7 @@ otel.WithTracing(tracing =>
 {
     tracing.AddAspNetCoreInstrumentation();
     tracing.AddHttpClientInstrumentation();
+    tracing.AddSource("TodoItemsController"); // This is necessary to capture your custom traces
 });
 
 // Use OTLP exporter

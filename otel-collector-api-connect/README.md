@@ -171,6 +171,19 @@ The application is deployed on a DEV AKS cluster.
 - Custom tracing is implemented using `ActivitySource` to capture detailed spans around specific API calls and business processes.
 - This allows you to monitor the execution flow of requests, identify bottlenecks, and debug performance issues effectively.
 
+## Viewing Logs in Azure Application Insights
+
+You can query logs, traces, and metrics in Azure Application Insights using the following query:
+
+```kusto
+traces 
+dependencies
+requests
+| where operation_Name == 'GET TodoItems'
+| summarize count() by bin(timestamp, 1m), operation_Name, url, resultCode
+| order by timestamp desc
+```
+
 ## Conclusion
 
 This .NET 8 project demonstrates how to integrate OpenTelemetry into an ASP.NET Core API, achieving full observability through logs, metrics, and traces. It showcases the benefits of sending structured logs in OpenTelemetry format, capturing native metrics automatically, and creating custom spans for critical business logic.
